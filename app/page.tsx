@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export default function Home() {
   return <main className="landing">
     <section className="hero">
@@ -7,7 +5,7 @@ export default function Home() {
       <h1>原価計算<br /><em>計算論点ドリル</em></h1>
       <p className="lead">WEEKを選択すると、3分間の小テストが始まります。</p>
       <div className="weekGrid">
-        {Array.from({ length: 8 }, (_, index) => index + 1).map((week) => <Link className="weekLink" href={`/week${String(week).padStart(2, "0")}`} key={week}>WEEK{week}</Link>)}
+        {Array.from({ length: 8 }, (_, index) => index + 1).map((week) => <a className="weekLink" href={`/week${String(week).padStart(2, "0")}`} key={week}>WEEK{week}</a>)}
       </div>
     </section>
   </main>;
