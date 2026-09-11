@@ -18,12 +18,12 @@ test("WEEK1〜8の入口を日本語で表示する", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
 
-test("WEEK専用ページに3分ドリルと直近1時間の正答率を表示する", async () => {
+test("WEEK専用ページに3分ドリルを表示し、共有集計を表示しない", async () => {
   const response = await render("/week01");
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /WEEK(?:<!-- -->)?1/);
-  assert.match(html, /直近1時間の正答率/);
+  assert.doesNotMatch(html, /直近1時間の正答率|集計データ/);
   assert.match(html, /制限時間は3分/);
   assert.match(html, /3分ドリルを始める/);
 });

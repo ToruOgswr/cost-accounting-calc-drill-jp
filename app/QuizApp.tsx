@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { prepareQuiz, type QuizQuestion } from "../lib/questions";
 
 type Screen = "top" | "quiz" | "result";
-type Stats = { percentage: number | null; submissions: number; correctCount: number; questionCount: number };
-
 const LIMIT_SECONDS = 180;
 
 export function QuizApp({ week, questions }: { week: number; questions: QuizQuestion[] }) {
@@ -15,9 +13,6 @@ export function QuizApp({ week, questions }: { week: number; questions: QuizQues
   const [selected, setSelected] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [remaining, setRemaining] = useState(LIMIT_SECONDS);
-  const [stats, setStats] = useState<Stats>({ percentage: null, submissions: 0, correctCount: 0, questionCount: 0 });
-  const [statsReady, setStatsReady] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const answersRef = useRef<Record<string, string>>({});
   const startedAtRef = useRef(0);
   const deadlineRef = useRef(0);
@@ -26,47 +21,19 @@ export function QuizApp({ week, questions }: { week: number; questions: QuizQues
   const lockedAnswer = current ? answers[current.id] : undefined;
   const score = quiz.filter((question) => answers[question.id] === question.correctAnswer).length;
 
-  const refreshStats = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/results?week=${week}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("stats unavailable");
-      setStats(await response.json() as Stats);
-      setStatsReady(true);
-    } catch { setStatsReady(false); }
-  }, [week]);
-
-  useEffect(() => {
-    if (screen !== "top") return;
-    void refreshStats();
-    const timer = window.setInterval(() => void refreshStats(), 15000);
-    return () => window.clearInterval(timer);
-  }, [refreshStats, screen]);
-
-  const complete = useCallback(async (finalAnswers: Record<string, string>, timedOut = false) => {
+  const complete = useCallback((finalAnswers: Record<string, string>) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     setAnswers(finalAnswers);
-    setSubmitted(false);
     setScreen("result");
-    const sessionKey = "cost-accounting-calc-drill-session";
-    let sessionId = window.localStorage.getItem(sessionKey);
-    if (!sessionId) { sessionId = crypto.randomUUID(); window.localStorage.setItem(sessionKey, sessionId); }
-    try {
-      const response = await fetch("/api/results", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId, week, startedAt: startedAtRef.current, timedOut, answers: quiz.map((question) => ({ id: question.id, answer: finalAnswers[question.id] ?? "" })) }),
-      });
-      setSubmitted(response.ok);
-    } catch { setSubmitted(false); }
-  }, [quiz, week]);
+  }, []);
 
   useEffect(() => {
     if (screen !== "quiz") return;
     const tick = () => {
       const seconds = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
       setRemaining(seconds);
-      if (seconds === 0) void complete(answersRef.current, true);
+      if (seconds === 0) complete(answersRef.current);
     };
     tick();
     const timer = window.setInterval(tick, 250);
@@ -92,11 +59,11 @@ export function QuizApp({ week, questions }: { week: number; questions: QuizQues
   }
 
   function next() {
-    if (index === quiz.length - 1) { void complete(answersRef.current); return; }
+    if (index === quiz.length - 1) { complete(answersRef.current); return; }
     setIndex((value) => value + 1); setSelected("");
   }
 
-  function returnTop() { setScreen("top"); setQuiz([]); setAnswers({}); setSelected(""); void refreshStats(); }
+  function returnTop() { setScreen("top"); setQuiz([]); setAnswers({}); setSelected(""); }
   const minutes = Math.floor(remaining / 60);
   const seconds = String(remaining % 60).padStart(2, "0");
 
@@ -106,11 +73,6 @@ export function QuizApp({ week, questions }: { week: number; questions: QuizQues
       <p className="eyebrow">COST ACCOUNTING</p>
       <h1>WEEK{week}<br /><em>計算論点ドリル</em></h1>
       <p className="lead">ランダムに3問出題します。制限時間は3分です。</p>
-      <div className="statsCard" aria-live="polite">
-        <span>直近1時間の正答率</span>
-        <strong>{statsReady && stats.percentage !== null ? `${stats.percentage}%` : "—"}</strong>
-        <small>{statsReady ? `回答完了 ${stats.submissions}件 · 正答 ${stats.correctCount}/${stats.questionCount}問` : "集計データを準備しています"}</small>
-      </div>
       <button className="primary" onClick={start}>3分ドリルを始める</button>
     </section>}
 
@@ -136,8 +98,8 @@ export function QuizApp({ week, questions }: { week: number; questions: QuizQues
       <h1>結果は <em>{score}/3</em></h1>
       <p>{remaining === 0 ? "制限時間が終了しました。" : "3問の回答が完了しました。"}</p>
       <div className="resultRows">{quiz.map((question, questionIndex) => <div key={question.id}><span>{questionIndex + 1}</span><p>{question.prompt}</p><b className={answers[question.id] === question.correctAnswer ? "ok" : "ng"}>{answers[question.id] === question.correctAnswer ? "正解" : "不正解"}</b></div>)}</div>
-      <p className="saveStatus">{submitted ? "回答を集計に反映しました。" : "回答結果を表示しています。"}</p>
-      <button className="primary" onClick={returnTop}>トップへ戻って正答率を見る</button>
+      <p className="saveStatus">回答はこの端末内だけで処理し、保存・送信しません。</p>
+      <button className="primary" onClick={returnTop}>トップへ戻る</button>
     </section>}
   </main>;
 }
