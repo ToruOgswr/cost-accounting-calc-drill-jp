@@ -2,6 +2,8 @@
 
 原価計算WEEK1〜8の主要な計算論点を、3問・3分で確認する教育用Webアプリです。問題と採点はブラウザ内で処理し、回答や利用者情報を保存・送信しません。
 
+公開サイト：<https://toruogswr.github.io/cost-accounting-calc-drill-jp/>
+
 ## 機能
 
 - WEEK1〜8の計算問題
